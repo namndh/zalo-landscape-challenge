@@ -8,44 +8,70 @@ import constants
 import torch
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
+from PIL import Image
+
+
+import pickle
+from dataset import ZaloLandscapeDataset
+
 
 HDF5_PATH = os.path.join(constants.DATA_DIR, 'trainval_data.hdf5')
+CIFAR10_PATH = os.path.join(constants.DATA_DIR, 'cifar-10-python/cifar-10-batches-py/data_batch_1')
+
 
 hdf5_file = h5py.File(HDF5_PATH, "r")
 
 data_num = hdf5_file["train_imgs"].shape[0]
 
 print(type(hdf5_file["train_imgs"][0]))
-img = np.reshape(hdf5_file["train_imgs"][0], (256, 256))
+img = hdf5_file["train_imgs"][0]
+print(img)
+img = img.ravel()
+img = img.reshape(1, -1)
+print(img)
+print(img.shape)
+# img = np.array(img)
+# img = Image.fromarray(img)
+
 # imgplot = plt.imshow(img, cmap='gray')
 # plt.show()
-
-transform = transforms.Compose(
-	[transforms.ToTensor(),
-		transforms.Normalize(())
-	])
-
-train_set
-
-for img, label in zip(hdf5_file["train_imgs"], hdf5_file["train_labels"]):
-
-
-cv2.imshow('IMG', img)
-cv2.waitKey(2000)
-cv2.destroyAllWindows()
+# cv2.imshow('IMG', img)
+# cv2.waitKey(2000)
+# cv2.destroyAllWindows()
 
 print(hdf5_file["train_imgs"][0].shape)
 
+with open(CIFAR10_PATH, 'rb') as f_in:
+	tmp = pickle.load(f_in, encoding='bytes')
+
+for key in tmp.keys():
+	print(key)
+
+
+print(tmp[b'data'][0].shape)
+
+# img = Image.fromarray(tmp[b'data'][0])
 
 print(data_num)
 
-class ZaloLandscapeDataset(Dataset):
-	def __init__(self, hdf5_file, root_dir, train, transform=None):
-		if os.path.isfile(hdf5_file):
-			self.hdf5_file = h5py.File(hdf5_file)
-			if train:
-				self.train = self.hdf5_file["train_imgs"]
-			else:
-				self.
-		
+transform_train = transforms.ToTensor()
+
+zalo_dataset = ZaloLandscapeDataset(hdf5_file=HDF5_PATH, root_dir='/data', train=True, transform=transform_train)
+
+for i in range(len(zalo_dataset)):
+	image, label = zalo_dataset[i]
+
+	print(type(image))
+	print(label)
+
+	img = image.numpy()
+	img = np.reshape(img, (256, 256))
+	imgplot = plt.imshow(img, cmap='gray')
+	plt.show()
+	# cv2.imshow('IMG', img)
+	# cv2.waitKey(2000)
+	# cv2.destroyAllWindows()
+
+	if i > 1:
+		break	
 		
