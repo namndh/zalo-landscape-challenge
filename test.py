@@ -1,54 +1,77 @@
 import os 
-import sys 
-import cv2
+import sys
 import numpy as np 
-import pickle	
-import h5py
-
+import h5py 
+import cv2	
+import matplotlib.pyplot as plt
 import constants
+import torch
+from torch.utils.data import Dataset, DataLoader
+import torchvision.transforms as transforms
+from PIL import Image
 
-TRAIN_ADDRS_TEXT = os.path.join(constants.PROJECT_DIR, 'train_addrs.b')
-DATA_SET_PATH = os.path.join(constants.PROJECT_DIR, 'train_data.b')
+
+import pickle
+from dataset import ZaloLandscapeDataset
+
+
 HDF5_PATH = os.path.join(constants.DATA_DIR, 'trainval_data.hdf5')
+CIFAR10_PATH = os.path.join(constants.DATA_DIR, 'cifar-10-python/cifar-10-batches-py/data_batch_1')
 
-with open(TRAIN_ADDRS_TEXT, 'rb') as f_in:
-	train_addrs = pickle.load(f_in)
 
-# data = np.empty((len(train_addrs), 1, 480, 480), dtype=np.uint8)
-# for i, addr in enumerate(train_addrs):
-# 	if i % 5000 == 0 and i > 1:
-# 		print("Train data:{}/{}".format(i, len(train_addrs)))
-# 	img = cv2.imread(addr)
-# 	img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-# 	img = cv2.resize(img, (480, 480), interpolation=cv2.INTER_CUBIC)
-# 	data[i, ...] = img[None]
-# with open(DATA_SET_PATH, 'wb+') as f:
-# 	pickle.dump(data, f)
-# print(data.shape)
-# print(data[1, ...])
-# cv2.imshow(data[1, ...], 'img')
+hdf5_file = h5py.File(HDF5_PATH, "r")
+
+data_num = hdf5_file["train_imgs"].shape[0]
+
+print(type(hdf5_file["train_imgs"][0]))
+img = hdf5_file["train_imgs"][0]
+print(img)
+img = img.ravel()
+img = img.reshape(1, -1)
+print(img)
+print(img.shape)
+# img = np.array(img)
+# img = Image.fromarray(img)
+
+# imgplot = plt.imshow(img, cmap='gray')
+# plt.show()
+# cv2.imshow('IMG', img)
 # cv2.waitKey(2000)
 # cv2.destroyAllWindows()
-# with open(DATA_SET_PATH, 'wb+') as f:
-# 	pickle.dump(data, f)
-train_shape = (len(train_addrs), 1, 256, 256)
-hdf5_file = h5py.File(HDF5_PATH, mode='w')
-hdf5_file.create_dataset("train_img", train_shape, np.int8)
-hdf5_file.create_dataset("train_mean", train_shape[1:], np.float32)
+
+print(hdf5_file["train_imgs"][0].shape)
+
+with open(CIFAR10_PATH, 'rb') as f_in:
+	tmp = pickle.load(f_in, encoding='bytes')
+
+for key in tmp.keys():
+	print(key)
 
 
-# mean = np.zeros(data_shape[1:], np.float32)
+print(tmp[b'data'][0].shape)
 
-for i in range(len(train_addrs)):
-	if i % 5000 == 0 and i > 1:
-		print('Train data: {}/{}'.format(i, len(train_addrs)))
-	addr = train_addrs[i]
-	img = cv2.imread(addr)
-	img = cv2.resize(img, (256, 256), interpolation=cv2.INTER_CUBIC)
-	img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+# img = Image.fromarray(tmp[b'data'][0])
 
-	hdf5_file["train_img"][i, ...] = img[None]
-	# mean += img / float(len(train_labels))
+print(data_num)
 
-# hdf5_file["train_mean"][...] = mean
-hdf5_file.close()
+transform_train = transforms.ToTensor()
+
+zalo_dataset = ZaloLandscapeDataset(hdf5_file=HDF5_PATH, root_dir='/data', train=True, transform=transform_train)
+
+for i in range(len(zalo_dataset)):
+	image, label = zalo_dataset[i]
+
+	print(type(image))
+	print(label)
+
+	img = image.numpy()
+	img = np.reshape(img, (256, 256))
+	imgplot = plt.imshow(img, cmap='gray')
+	plt.show()
+	# cv2.imshow('IMG', img)
+	# cv2.waitKey(2000)
+	# cv2.destroyAllWindows()
+
+	if i > 1:
+		break	
+		
