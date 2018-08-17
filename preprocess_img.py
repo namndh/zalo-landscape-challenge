@@ -4,7 +4,7 @@ import sys
 import glob	 
 from random import shuffle
 import numpy as np 
-import tables
+
 import h5py
 import pickle
 
@@ -18,7 +18,6 @@ PREPROCESSED_TRAIN_VAL_DATA_PATH = os.path.join(PREPROCESSED_DATA_PATH, 'train_v
 PREPOCESSED_TEST_DATA_PATH = os.path.join(PREPROCESSED_DATA_PATH, 'test_data')
 HDF5_PATH = os.path.join(constants.DATA_DIR, 'trainval_data.hdf5')
 HDF5_TEST_PATH = os.path.join(constants.DATA_DIR, 'test_data.hdf5')
-VAL_ADDRS_PATH = os.path.join(constants.PROJECT_DIR, 'val_addrs.b')
 
 trainval_dataset = list()
 test_dataset = list()
@@ -132,32 +131,32 @@ def build_test_dataset(TEST_DATA_PATH,HDF5_TEST_PATH, size=256, gray=True):
 
 
 def main():
-	# for i in range(constants.NUM_LABELS):
-	# 	tmp_path = os.path.join(TRAINVAL_DATA_PATH, str(i) + '/*.jpg')
-	# 	# print(tmp_path)
-	# 	img_adrs = glob.glob(tmp_path, recursive=False)
-	# 	labels = [i] * len(img_adrs)
-	# 	tmp_sets = list(zip(img_adrs, labels))
-	# 	for tmp_set in tmp_sets:
-	# 		trainval_dataset.append(tmp_set)
+	for i in range(constants.NUM_LABELS):
+		tmp_path = os.path.join(TRAINVAL_DATA_PATH, str(i) + '/*.jpg')
+		# print(tmp_path)
+		img_adrs = glob.glob(tmp_path, recursive=False)
+		labels = [i] * len(img_adrs)
+		tmp_sets = list(zip(img_adrs, labels))
+		for tmp_set in tmp_sets:
+			trainval_dataset.append(tmp_set)
 
-	# if shuffle_dataset:
-	# 	shuffle(trainval_dataset)
-	# 	addrs, labels = zip(*trainval_dataset)
+	if shuffle_dataset:
+		shuffle(trainval_dataset)
+		addrs, labels = zip(*trainval_dataset)
 
-	# addrs, labels = list(addrs), list(labels)
+	addrs, labels = list(addrs), list(labels)
 
 
-	# remove_empty(addrs, labels=labels)
+	remove_empty(addrs, labels=labels)
 
-	# print(len(addrs))
-	# print(len(labels))
-	# train_addrs = addrs[0:int(0.8*len(addrs))]
-	# train_labels = labels[0:int(0.8*len(labels))]
+	print(len(addrs))
+	print(len(labels))
+	train_addrs = addrs[0:int(0.8*len(addrs))]
+	train_labels = labels[0:int(0.8*len(labels))]
 
-	# val_addrs = addrs[int(0.8*len(addrs)):int(len(addrs))]
-	# val_labels = labels[int(0.8*len(addrs)):int(len(addrs))]
-	# build_train_val_dataset(train_addrs, val_addrs, train_labels, val_labels, HDF5_PATH)
+	val_addrs = addrs[int(0.8*len(addrs)):int(len(addrs))]
+	val_labels = labels[int(0.8*len(addrs)):int(len(addrs))]
+	build_train_val_dataset(train_addrs, val_addrs, train_labels, val_labels, HDF5_PATH)
 	build_test_dataset(TEST_DATA_PATH, HDF5_TEST_PATH)
 
 
