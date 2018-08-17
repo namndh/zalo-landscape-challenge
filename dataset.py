@@ -5,7 +5,7 @@ import os
 import h5py
 
 
-class ZaloLandscapeDataset(Dataset):
+class ZaloLandscapeTrainValDataset(Dataset):
 	def __init__(self, hdf5_file, root_dir, train, transform=None):
 		if os.path.isfile(hdf5_file):
 			self.hdf5_file = h5py.File(hdf5_file)
@@ -40,3 +40,29 @@ class ZaloLandscapeDataset(Dataset):
 			image = self.transform(image)
 
 		return image, label
+
+class ZaloLandScapeTestDataset(Dataset):
+	"""Class for loading data"""
+	def __init__(self, hdf5_file, root_dir, transform=None):	
+		if os.path.isfile(hdf5_file):
+			self.hdf5_file = h5py.File(hdf5_file)
+			self.test_imgs = self.hdf5_file["test_imgs"]
+			self.test_ids = self.hdf5_file["test_ids"]
+			self.root_dir = root_dir
+			self.transform = transform
+		else:
+			print('Data path is not available!')
+			exit(1)
+
+	def  __len__(self):
+		return len(self.train_imgs)
+
+	def  __getitem__(self, idx):
+		image = self.test_imgs[idx, ...]
+		image_id = self.test_ids[idx]
+
+		if self.transform:
+			image = self.transform(image)
+
+		return image, image_id
+		
