@@ -83,7 +83,7 @@ def build_train_val_dataset(train_addrs, val_addrs, train_labels, val_labels, HD
 		if gray:
 			img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 		img = cv2.resize(img, (size, size), interpolation=cv2.INTER_AREA)
-
+		img = img.transpose(2, 0, 1)
 		hdf5_file["train_imgs"][i, ...] = img[None]
 
 	for i in range(len(val_addrs)):
@@ -93,8 +93,8 @@ def build_train_val_dataset(train_addrs, val_addrs, train_labels, val_labels, HD
 		img = cv2.imread(addr)
 		if gray:
 			img= cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-		img = cv2.resize(img, (256, 256), interpolation=cv2.INTER_AREA)
-
+		img = cv2.resize(img, (size, size), interpolation=cv2.INTER_AREA)
+		img = img.transpose(2, 0, 1)
 		hdf5_file["val_imgs"][i, ...] = img[None]
 
 	hdf5_file.close()
@@ -124,7 +124,7 @@ def build_test_dataset(TEST_DATA_PATH,HDF5_TEST_PATH, size=256, gray=True):
 		if gray:
 			img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 		img = cv2.resize(img, (size, size), interpolation=cv2.INTER_AREA)
-
+		img = img.transpose(2, 0, 1)
 		hdf5_file["test_imgs"][i, ...] = img[None]
 
 	hdf5_file.close()
@@ -156,8 +156,8 @@ def main():
 
 	val_addrs = addrs[int(0.8*len(addrs)):int(len(addrs))]
 	val_labels = labels[int(0.8*len(addrs)):int(len(addrs))]
-	build_train_val_dataset(train_addrs, val_addrs, train_labels, val_labels, HDF5_PATH)
-	build_test_dataset(TEST_DATA_PATH, HDF5_TEST_PATH)
+	build_train_val_dataset(train_addrs, val_addrs, train_labels, val_labels, HDF5_PATH, size=224, gray=False)
+	build_test_dataset(TEST_DATA_PATH, HDF5_TEST_PATH, size=224, gray=False)
 
 
 if __name__ == '__main__':
