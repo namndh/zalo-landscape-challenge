@@ -13,7 +13,7 @@ import torchvision.models as models
 import numpy as np
 import csv	
 import torchvision.transforms as transforms
-
+from git import Repo
 
 from utils import *
 import constants 
@@ -177,3 +177,14 @@ if args.train:
 if args.predict:
 	predict()
 
+repo_dir = 'zalo-landscape-challenge'
+repo = Repo(repo_dir)
+file_list = [
+	'./checkpoint/ckpt.t7'
+]
+
+commit_message = 'Add saved model'
+repo.index.add(file_list)
+repo.index.commit(commit_message)
+origin = repo.remote('origin')
+origin.push()
