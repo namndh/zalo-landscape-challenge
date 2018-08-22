@@ -14,6 +14,7 @@ import numpy as np
 import csv	
 import torchvision.transforms as transforms
 
+
 from utils import *
 import constants 
 from dataset import ZaloLandScapeTestDataset, ZaloLandscapeTrainValDataset
@@ -35,16 +36,22 @@ best_err = 0
 print(torch.cuda.current_device())
 
 transform_to_tensor = transforms.ToTensor()
+normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+transform = transforms.Compose([
+		transforms.ToTensor(),
+		normalize,
+	])
 
-train_set = ZaloLandscapeTrainValDataset(TRAINVAL_PATH, root_dir='./data', train=True, transform=transform_to_tensor)
-val_set = ZaloLandscapeTrainValDataset(TRAINVAL_PATH, root_dir='./data', train=False, transform=transform_to_tensor)
-test_set = ZaloLandScapeTestDataset(TEST_PATH, root_dir='./data', transform=transform_to_tensor)
+train_set = ZaloLandscapeTrainValDataset(TRAINVAL_PATH, root_dir='./data', train=True, transform=transform)
+val_set = ZaloLandscapeTrainValDataset(TRAINVAL_PATH, root_dir='./data', train=False, transform=transform)
+test_set = ZaloLandScapeTestDataset(TEST_PATH, root_dir='./data', transform=transform)
 
-train_loader = utilsData.DataLoader(dataset=train_set, batch_size=200, sampler=None, shuffle=True, batch_sampler=None)
-val_loader = utilsData.DataLoader(dataset=val_set, batch_size=200, sampler=None, shuffle=True, batch_sampler=None)
-test_loader = utilsData.DataLoader(dataset=test_set, batch_size=200, sampler=None, shuffle=False, batch_sampler=None)
+train_loader = utilsData.DataLoader(dataset=train_set, batch_size=50, sampler=None, shuffle=True, batch_sampler=None)
+val_loader = utilsData.DataLoader(dataset=val_set, batch_size=50, sampler=None, shuffle=True, batch_sampler=None)
+test_loader = utilsData.DataLoader(dataset=test_set, batch_size=50, sampler=None, shuffle=False, batch_sampler=None)
 
-net = models.resnet34(pretrained=False)
+net = models.resnet18(pretrained=False)
 print(net)
 net.to(device)
 if device == 'cuda':
@@ -65,6 +72,7 @@ def train(epoch):
 	train_top3_correct = 0
 
 	for batch_id, (images, labels) in enumerate(train_loader):
+		labels = labels.long()
 		images, labels = images.to(device), labels.to(device)
 		optimizer.zero_grad()
 		outputs = net(images)
@@ -79,32 +87,33 @@ def train(epoch):
 		total += labels.size(0)
 		train_correct += predicted.eq(labels).sum().item()
 	top1_error = 1 - float(train_correct)/total
-	top3_error = 1 - float(train_topk_correct)/total
-	print('Loss:%.3f | Top 1 Error: %.3f | Top 3 Error : %.3f' % (train_loss/(batch_id + 1)), top1_error, top3_error)
+	top3_error = 1 - float(train_top3_correct)/total
+	print('Loss:{} | Top 1 Error: {} | Top 3 Error : {}'.format((train_loss/(batch_id + 1)), top1_error, top3_error))
 
 def validate(epoch):
 	print('\nEpoch: %d' % int(epoch))
 	net.eval()
-	train_loss = 0
-	train_correct = 0
+	validate_loss = 0
+	validate_correct = 0
 	total = 0
-	train_top3_correct = 0
+	validate_top3_correct = 0
 
 	for batch_id, (images, labels) in enumerate(val_loader):
+		labels = labels.long()
 		images, labels = images.to(device), labels.to(device)
 		outputs = net(images)
 		loss = criterion(outputs, labels)
 
-		test_loss += loss.item()
+		validate_loss += loss.item()
 		_, predicted = outputs.max(1)
 		top3_correct, _ = custom_topK(outputs.data.cpu().numpy(), labels, 3)
-		train_top3_correct += top3_correct
+		validate_top3_correct += top3_correct
 		total += labels.size(0)
-		correct += predicted.eq(labels).sum().item()
-	top1_error = 1 - float(train_correct)/total 
-	top3_error = 1 - float(train_top3_correct)/total
-	acc = (1 - top3_error)*100
-	print('Loss:%.3f | Top 1 Error: %.3f | Top 3 Error : %.3f' % (train_loss/(batch_id + 1)), top1_error, top3_error)
+		validate_correct += predicted.eq(labels).sum().item()
+	top1_error = 1 - float(validate_correct)/total 
+	top3_error = 1 - float(validate_top3_correct)/total
+	acc = (1 - top1_error)*100
+	print('Loss:{} | Top 1 Error: {} | Top 3 Error : {}'.format((validate_loss/(batch_id + 1)), top1_error, top3_error))
 
 	if top3_error < best_err :
 		print('Saving ...')
@@ -161,7 +170,7 @@ if args.resume:
 
 if args.train:
 	print('===> Train the model ...')
-	for epoch in range(start_epoch, start_epoch + 150):
+	for epoch in range(start_epoch, start_epoch+150):
 		train(epoch)
 		validate(epoch)
 

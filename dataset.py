@@ -34,7 +34,7 @@ class ZaloLandscapeTrainValDataset(Dataset):
 			label = self.train_labels[idx]
 		else:
 			image = self.val_imgs[idx, ...]
-			label = self.val_imgs[idx]
+			label = self.val_labels[idx]
 
 		if self.transform:
 			image = self.transform(image)

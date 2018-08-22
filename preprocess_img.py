@@ -135,7 +135,7 @@ def main():
 		tmp_path = os.path.join(TRAINVAL_DATA_PATH, str(i) + '/*.jpg')
 		# print(tmp_path)
 		img_adrs = glob.glob(tmp_path, recursive=False)
-		labels = [i] * len(img_adrs)
+		labels = [int(i)] * len(img_adrs)
 		tmp_sets = list(zip(img_adrs, labels))
 		for tmp_set in tmp_sets:
 			trainval_dataset.append(tmp_set)
@@ -145,6 +145,8 @@ def main():
 		addrs, labels = zip(*trainval_dataset)
 
 	addrs, labels = list(addrs), list(labels)
+	print(len(labels))
+	print(type(labels[0]))
 
 
 	remove_empty(addrs, labels=labels)
