@@ -14,7 +14,6 @@ import numpy as np
 import csv	
 import torchvision.transforms as transforms
 from git import Repo
-import pickle
 
 from utils import *
 import constants 
