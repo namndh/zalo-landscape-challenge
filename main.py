@@ -14,6 +14,7 @@ import numpy as np
 import csv	
 import torchvision.transforms as transforms
 from git import Repo
+import pickle
 
 from utils import *
 import constants 
@@ -22,17 +23,19 @@ from dataset import ZaloLandScapeTestDataset, ZaloLandscapeTrainValDataset
 TRAINVAL_PATH = os.path.join(constants.DATA_DIR, 'trainval_data.hdf5')
 TEST_PATH = os.path.join(constants.DATA_DIR, 'test_data.hdf5')
 LOG_FILE = os.path.join(constants.PROJECT_DIR, 'submisson.csv')
+EMPTY_TEST_ADDRS_FILE = os.path.join(constants.PROJECT_DIR, 'empty_test_addr.b')
 
 parser = argparse.ArgumentParser(description='Zalo Landscape Classification')
 parser.add_argument('--lr', default=0.1, type=float, help='Learning Rate')
 parser.add_argument('--resume', '-r', action='store_true', help='Resume from checkpoint')
 parser.add_argument('--train', '-tr', action='store_true', help='Train the model')
 parser.add_argument('--predict', '-pr', action='store_true', help='Predict the data')
+parser.add_argument('--inspect', '-ins', action='store_true', help='Inspect saved model')
 args = parser.parse_args()
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 start_epoch = 0
-best_err = 0
+best_err = 1
 print(torch.cuda.current_device())
 
 transform_to_tensor = transforms.ToTensor()
@@ -97,6 +100,7 @@ def validate(epoch):
 	validate_correct = 0
 	total = 0
 	validate_top3_correct = 0
+	global best_err
 
 	for batch_id, (images, labels) in enumerate(val_loader):
 		labels = labels.long()
@@ -126,17 +130,16 @@ def validate(epoch):
 		}
 		if not os.path.isdir('checkpoint'):
 			os.mkdir('checkpoint')
-		torch.save(state, '/checkpoint/ckpt.t7')
+		torch.save(state, 'checkpoint/ckpt.t7')
 		best_err = top3_error
 
 def predict():
 	assert os.path.isdir('checkpoint'), 'Error: model not available'
-	checkpoint = torch.load('./checkpoint/model.t7')
+	checkpoint = torch.load('./checkpoint/ckpt.t7')
 	net.load_state_dict(checkpoint['net'])
-	device = checkpoint['device']
 	top1_err = checkpoint['top1_err']
 	top3_err = checkpoint['top3_err']
-	start_epoch = checkpoint['checkpoint']
+	start_epoch = checkpoint['epoch']
 	f = open(LOG_FILE, 'w+')
 	f.write('id,predicted\n')
 
@@ -153,7 +156,16 @@ def predict():
 			f.write(tmp)
 
 		if idx % 2000 and idx > 1:
-			print("Processing {}/{}".format(idx, len(test_loader)))
+			print("Processing {}/{}".format(idx+1, len(test_loader)))
+
+def inspect():
+	assert os.path.isdir('checkpoint'), 'Error: model not available!'
+	checkpoint = torch.load('./checkpoint/ckpt.t7')
+	net.load_state_dict(checkpoint['net'])
+	top1_err = checkpoint['top1_err']
+	top3_err = checkpoint['top3_err']
+	print('Model was saved based on results in Validate set.\n')
+	print('Device: {} | Top 1 Error : {} | Top 3 Error: {}'.format(device, top1_err, top3_err))
 
 
 if args.resume:
@@ -177,14 +189,22 @@ if args.train:
 if args.predict:
 	predict()
 
-repo_dir = 'zalo-landscape-challenge'
-repo = Repo(repo_dir)
-file_list = [
-	'./checkpoint/ckpt.t7'
-]
+if args.inspect:
+	inspect()
 
-commit_message = 'Add saved model'
-repo.index.add(file_list)
-repo.index.commit(commit_message)
-origin = repo.remote('origin')
-origin.push()
+with open(EMPTY_TEST_ADDRS_FILE, 'rb') as f:
+	empty_test_addrs = pickle.load(f)
+	print(empty_test_addrs)
+	
+
+# repo_dir = 'zalo-landscape-challenge'
+# repo = Repo(repo_dir)
+# file_list = [
+# 	'checkpoint/ckpt.t7'
+# ]
+
+# commit_message = 'Add saved model'
+# repo.index.add(file_list)
+# repo.index.commit(commit_message)
+# origin = repo.remote('origin')
+# origin.push()

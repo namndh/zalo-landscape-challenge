@@ -18,6 +18,7 @@ PREPROCESSED_TRAIN_VAL_DATA_PATH = os.path.join(PREPROCESSED_DATA_PATH, 'train_v
 PREPOCESSED_TEST_DATA_PATH = os.path.join(PREPROCESSED_DATA_PATH, 'test_data')
 HDF5_PATH = os.path.join(constants.DATA_DIR, 'trainval_data.hdf5')
 HDF5_TEST_PATH = os.path.join(constants.DATA_DIR, 'test_data.hdf5')
+EMPTY_TEST_ADDRS_FILE = os.path.join(constants.PROJECT_DIR, 'empty_test_addr.b')
 
 trainval_dataset = list()
 test_dataset = list()
@@ -103,62 +104,70 @@ def build_test_dataset(TEST_DATA_PATH,HDF5_TEST_PATH, size=256, gray=True):
 	test_path = os.path.join(TEST_DATA_PATH, '*.jpg')
 	test_data_addrs = glob.glob(test_path, recursive=False)
 	test_data_addrs = list(test_data_addrs)
+	tmp_test_addrs = test_data_addrs
+	print(len(tmp_test_addrs))
 	remove_empty(test_data_addrs)
+	empty_addrs = list(set(tmp_test_addrs) - set(test_data_addrs))
+	print(len(empty_addrs))
+	empty_test_ids = get_id(empty_addrs)
 	test_ids = get_id(test_data_addrs)
+	with open(EMPTY_TEST_ADDRS_FILE, 'wb') as f:
+		pickle.dump(empty_test_ids, f)
+		
 	if gray:
 		channel = 1
 	else:
 		channel = 3
-	test_shape = (len(test_data_addrs), channel, size, size)
-	test_shape = (len(test_data_addrs), channel, size, size)
-	hdf5_file = h5py.File(HDF5_TEST_PATH, mode='w')
-	hdf5_file.create_dataset("test_imgs", test_shape, np.uint8)
-	dt = h5py.special_dtype(vlen=str)
-	hdf5_file.create_dataset("test_ids", (len(test_ids),), dtype=dt)
-	hdf5_file["test_ids"][...] = test_ids
-	for i in range(len(test_data_addrs)):
-		if i % 5000 == 0 and i > 1:
-			print('Test data: {}/{}'.format(i, len(test_data_addrs)))
-		addr = test_data_addrs[i]
-		img = cv2.imread(addr)
-		if gray:
-			img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-		img = cv2.resize(img, (size, size), interpolation=cv2.INTER_AREA)
-		img = img.transpose(2, 0, 1)
-		hdf5_file["test_imgs"][i, ...] = img[None]
+	# test_shape = (len(test_data_addrs), channel, size, size)
+	# test_shape = (len(test_data_addrs), channel, size, size)
+	# hdf5_file = h5py.File(HDF5_TEST_PATH, mode='w')
+	# hdf5_file.create_dataset("test_imgs", test_shape, np.uint8)
+	# dt = h5py.special_dtype(vlen=str)
+	# hdf5_file.create_dataset("test_ids", (len(test_ids),), dtype=dt)
+	# hdf5_file["test_ids"][...] = test_ids
+	# for i in range(len(test_data_addrs)):
+	# 	if i % 5000 == 0 and i > 1:
+	# 		print('Test data: {}/{}'.format(i, len(test_data_addrs)))
+	# 	addr = test_data_addrs[i]
+	# 	img = cv2.imread(addr)
+	# 	if gray:
+	# 		img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+	# 	img = cv2.resize(img, (size, size), interpolation=cv2.INTER_AREA)
+	# 	img = img.transpose(2, 0, 1)
+	# 	hdf5_file["test_imgs"][i, ...] = img[None]
 
-	hdf5_file.close()
+	# hdf5_file.close()
 
 
 def main():
-	for i in range(constants.NUM_LABELS):
-		tmp_path = os.path.join(TRAINVAL_DATA_PATH, str(i) + '/*.jpg')
-		# print(tmp_path)
-		img_adrs = glob.glob(tmp_path, recursive=False)
-		labels = [int(i)] * len(img_adrs)
-		tmp_sets = list(zip(img_adrs, labels))
-		for tmp_set in tmp_sets:
-			trainval_dataset.append(tmp_set)
+	# for i in range(constants.NUM_LABELS):
+	# 	tmp_path = os.path.join(TRAINVAL_DATA_PATH, str(i) + '/*.jpg')
+	# 	# print(tmp_path)
+	# 	img_adrs = glob.glob(tmp_path, recursive=False)
+	# 	labels = [int(i)] * len(img_adrs)
+	# 	tmp_sets = list(zip(img_adrs, labels))
+	# 	for tmp_set in tmp_sets:
+	# 		trainval_dataset.append(tmp_set)
 
-	if shuffle_dataset:
-		shuffle(trainval_dataset)
-		addrs, labels = zip(*trainval_dataset)
+	# if shuffle_dataset:
+	# 	shuffle(trainval_dataset)
+	# 	addrs, labels = zip(*trainval_dataset)
 
-	addrs, labels = list(addrs), list(labels)
-	print(len(labels))
-	print(type(labels[0]))
+	# addrs, labels = list(addrs), list(labels)
+	# print(len(labels))
+	# print(type(labels[0]))
 
 
-	remove_empty(addrs, labels=labels)
+	# remove_empty(addrs, labels=labels)
 
-	print(len(addrs))
-	print(len(labels))
-	train_addrs = addrs[0:int(0.8*len(addrs))]
-	train_labels = labels[0:int(0.8*len(labels))]
+	# print(len(addrs))
+	# print(len(labels))
+	# train_addrs = addrs[0:int(0.8*len(addrs))]
+	# train_labels = labels[0:int(0.8*len(labels))]
 
-	val_addrs = addrs[int(0.8*len(addrs)):int(len(addrs))]
-	val_labels = labels[int(0.8*len(addrs)):int(len(addrs))]
-	build_train_val_dataset(train_addrs, val_addrs, train_labels, val_labels, HDF5_PATH, size=224, gray=False)
+	# val_addrs = addrs[int(0.8*len(addrs)):int(len(addrs))]
+	# val_labels = labels[int(0.8*len(addrs)):int(len(addrs))]
+	# build_train_val_dataset(train_addrs, val_addrs, train_labels, val_labels, HDF5_PATH, size=224, gray=False)
 	build_test_dataset(TEST_DATA_PATH, HDF5_TEST_PATH, size=224, gray=False)
 
 

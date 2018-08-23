@@ -55,7 +55,7 @@ class ZaloLandScapeTestDataset(Dataset):
 			exit(1)
 
 	def  __len__(self):
-		return len(self.train_imgs)
+		return len(self.test_imgs)
 
 	def  __getitem__(self, idx):
 		image = self.test_imgs[idx, ...]

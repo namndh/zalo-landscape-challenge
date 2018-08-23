@@ -12,4 +12,6 @@ def custom_topK(pred, gt, k=3): # tham khao cua anh tiepvupsu
 
 def gen_output_csv(idx, outputs):
 	idx = str(idx)
-	return idx + str(outputs)[1:-1].replace(',', ' ') + '\n'
+	print(str(outputs)[1:-1].replace('  ', ','))
+	print(outputs)
+	return idx + ',' + str(outputs)[1:-1].replace(',', '') + '\n'
