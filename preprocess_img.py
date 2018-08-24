@@ -24,18 +24,6 @@ trainval_dataset = list()
 test_dataset = list()
 shuffle_dataset = True
 
-def remove_empty(addrs, labels=None):
-	for idx, img_path in enumerate(addrs):
-		if not os.path.isfile(img_path):
-			del addrs[idx]
-			if labels:
-				del labels[idx]
-		img = cv2.imread(img_path)
-		if img is None:
-			del addrs[idx]
-			if labels:
-				del labels[idx]
-
 def get_id(test_data_addrs):
 	test_data_addrs = list(test_data_addrs)
 	substr1 = 'Test/'
@@ -49,6 +37,30 @@ def get_id(test_data_addrs):
 		test_ids.append(test_id)
 	return test_ids
 
+def empty_filter_test(addrs):
+	empty_addrs = list()
+	for idx, img_path in enumerate(addrs):
+		if not os.path.isfile(img_path):
+			del addrs[idx]
+			
+		img = cv2.imread(img_path)
+		if img is None:
+			del addrs[idx]                                   
+			
+			empty_addrs.append(img_path)
+	print(empty_addrs)
+	empty_addrs = get_id(empty_addrs)
+	return empty_addrs
+
+def remove_empty_trainval(addrs, labels):
+	for idx, img_path in enumerate(addrs):
+		if not os.path.isfile(img_path):
+			del addrs[idx]
+			del labels[idx]
+		img = cv2.imread(img_path)
+		if img is None:
+			del addrs[idx]                                   
+			del labels[idx]
 
 def trainval_paths_list(trainval_sets, shuffle_dataset=True):
 	if shuffle_dataset:
@@ -104,15 +116,11 @@ def build_test_dataset(TEST_DATA_PATH,HDF5_TEST_PATH, size=256, gray=True):
 	test_path = os.path.join(TEST_DATA_PATH, '*.jpg')
 	test_data_addrs = glob.glob(test_path, recursive=False)
 	test_data_addrs = list(test_data_addrs)
-	tmp_test_addrs = test_data_addrs
-	print(len(tmp_test_addrs))
-	remove_empty(test_data_addrs)
-	empty_addrs = list(set(tmp_test_addrs) - set(test_data_addrs))
-	print(len(empty_addrs))
-	empty_test_ids = get_id(empty_addrs)
-	test_ids = get_id(test_data_addrs)
+	print(len(test_data_addrs))
+	empty_addrs = list()
+	empty_addrs = empty_filter_test(test_data_addrs)
 	with open(EMPTY_TEST_ADDRS_FILE, 'wb') as f:
-		pickle.dump(empty_test_ids, f)
+		pickle.dump(empty_addrs, f)
 		
 	if gray:
 		channel = 1
