@@ -24,7 +24,8 @@ trainval_dataset = list()
 test_dataset = list()
 shuffle_dataset = True
 
-def remove_empty(addrs, labels=None):
+def empty_filter(addrs, labels=None):
+	empty_ids = list()
 	for idx, img_path in enumerate(addrs):
 		if not os.path.isfile(img_path):
 			del addrs[idx]
@@ -35,6 +36,8 @@ def remove_empty(addrs, labels=None):
 			del addrs[idx]
 			if labels:
 				del labels[idx]
+			if not labels:
+				empty_ids.append(idx)
 
 def get_id(test_data_addrs):
 	test_data_addrs = list(test_data_addrs)
