@@ -14,6 +14,7 @@ import numpy as np
 import csv	
 import torchvision.transforms as transforms
 from git import Repo
+import pickle
 
 from utils import *
 import constants 
@@ -191,9 +192,9 @@ if args.predict:
 if args.inspect:
 	inspect()
 
-with open(EMPTY_TEST_ADDRS_FILE, 'rb') as f:
-	empty_test_addrs = pickle.load(f)
-	print(empty_test_addrs)
+# with open(EMPTY_TEST_ADDRS_FILE, 'rb') as f:
+# 	empty_test_addrs = pickle.load(f)
+# 	print(empty_test_addrs)
 	
 
 # repo_dir = 'zalo-landscape-challenge'
