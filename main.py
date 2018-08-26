@@ -13,7 +13,7 @@ import torchvision.models as models
 import numpy as np
 import csv	
 import torchvision.transforms as transforms
-from git import Repo
+
 import pickle
 
 from utils import *
@@ -54,7 +54,7 @@ train_loader = utilsData.DataLoader(dataset=train_set, batch_size=50, sampler=No
 val_loader = utilsData.DataLoader(dataset=val_set, batch_size=50, sampler=None, shuffle=True, batch_sampler=None)
 test_loader = utilsData.DataLoader(dataset=test_set, batch_size=50, sampler=None, shuffle=False, batch_sampler=None)
 
-net = models.resnet18(pretrained=False)
+net = models.resnet34(pretrained=True)
 print(net)
 net.to(device)
 if device == 'cuda':

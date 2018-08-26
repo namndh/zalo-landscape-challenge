@@ -119,6 +119,7 @@ def build_test_dataset(TEST_DATA_PATH,HDF5_TEST_PATH, size=256, gray=True):
 	print(len(test_data_addrs))
 	empty_addrs = list()
 	empty_addrs = empty_filter_test(test_data_addrs)
+	test_ids = get_id(test_data_addrs)
 	with open(EMPTY_TEST_ADDRS_FILE, 'wb') as f:
 		pickle.dump(empty_addrs, f)
 		
@@ -126,25 +127,25 @@ def build_test_dataset(TEST_DATA_PATH,HDF5_TEST_PATH, size=256, gray=True):
 		channel = 1
 	else:
 		channel = 3
-	# test_shape = (len(test_data_addrs), channel, size, size)
-	# test_shape = (len(test_data_addrs), channel, size, size)
-	# hdf5_file = h5py.File(HDF5_TEST_PATH, mode='w')
-	# hdf5_file.create_dataset("test_imgs", test_shape, np.uint8)
-	# dt = h5py.special_dtype(vlen=str)
-	# hdf5_file.create_dataset("test_ids", (len(test_ids),), dtype=dt)
-	# hdf5_file["test_ids"][...] = test_ids
-	# for i in range(len(test_data_addrs)):
-	# 	if i % 5000 == 0 and i > 1:
-	# 		print('Test data: {}/{}'.format(i, len(test_data_addrs)))
-	# 	addr = test_data_addrs[i]
-	# 	img = cv2.imread(addr)
-	# 	if gray:
-	# 		img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-	# 	img = cv2.resize(img, (size, size), interpolation=cv2.INTER_AREA)
-	# 	img = img.transpose(2, 0, 1)
-	# 	hdf5_file["test_imgs"][i, ...] = img[None]
+	test_shape = (len(test_data_addrs), channel, size, size)
+	test_shape = (len(test_data_addrs), channel, size, size)
+	hdf5_file = h5py.File(HDF5_TEST_PATH, mode='w')
+	hdf5_file.create_dataset("test_imgs", test_shape, np.uint8)
+	dt = h5py.special_dtype(vlen=str)
+	hdf5_file.create_dataset("test_ids", (len(test_ids),), dtype=dt)
+	hdf5_file["test_ids"][...] = test_ids
+	for i in range(len(test_data_addrs)):
+		if i % 5000 == 0 and i > 1:
+			print('Test data: {}/{}'.format(i, len(test_data_addrs)))
+		addr = test_data_addrs[i]
+		img = cv2.imread(addr)
+		if gray:
+			img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+		img = cv2.resize(img, (size, size), interpolation=cv2.INTER_AREA)
+		img = img.transpose(2, 0, 1)
+		hdf5_file["test_imgs"][i, ...] = img[None]
 
-	# hdf5_file.close()
+	hdf5_file.close()
 
 
 def main():
@@ -166,7 +167,7 @@ def main():
 	# print(type(labels[0]))
 
 
-	# remove_empty(addrs, labels=labels)
+	# remove_empty_trainval(addrs, labels=labels)
 
 	# print(len(addrs))
 	# print(len(labels))
