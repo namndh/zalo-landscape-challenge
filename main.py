@@ -27,15 +27,18 @@ EMPTY_TEST_ADDRS_FILE = os.path.join(constants.PROJECT_DIR, 'empty_test_addr.b')
 
 parser = argparse.ArgumentParser(description='Zalo Landscape Classification')
 parser.add_argument('--lr', default=0.1, type=float, help='Learning Rate')
+parser.add_argument('--optim', default='adam', type=str, help='Optimization function')
 parser.add_argument('--resume', '-r', action='store_true', help='Resume from checkpoint')
 parser.add_argument('--train', '-tr', action='store_true', help='Train the model')
 parser.add_argument('--predict', '-pr', action='store_true', help='Predict the data')
 parser.add_argument('--inspect', '-ins', action='store_true', help='Inspect saved model')
+parser.add_argument('--interval', default=150, type=float, help='Number of epochs to train the model')
 args = parser.parse_args()
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 start_epoch = 0
 best_err = 1
+best_loss  = 0
 print(torch.cuda.current_device())
 
 transform_to_tensor = transforms.ToTensor()
@@ -63,7 +66,10 @@ if device == 'cuda':
 
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=args.lr)
+if args.optim == 'adam':
+	optimizer = optim.Adam(net.parameters(), lr=args.lr)
+if args.optim == 'sgd':
+	optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9)
 
 
 def train(epoch):	
@@ -73,6 +79,7 @@ def train(epoch):
 	train_correct = 0 
 	total = 0 
 	train_top3_correct = 0
+
 
 	for batch_id, (images, labels) in enumerate(train_loader):
 		labels = labels.long()
@@ -89,6 +96,33 @@ def train(epoch):
 		train_top3_correct += top3_correct
 		total += labels.size(0)
 		train_correct += predicted.eq(labels).sum().item()
+
+	global best_loss
+	if epoch == 0:
+		best_loss = train_loss/(batch_id + 1)
+		print('Saving ....')
+		state = {
+			'net' : net.state_dict(),
+			'loss' : best_loss,
+			'epoch' : epoch
+		}
+		if not os.path.isdir('checkpoint'):
+			os.mkdir('checkpoint')
+		torch.save(state, 'checkpoint/convergence.t7')
+
+	else:	
+		if train_loss/(batch_id + 1) < best_loss:
+			print('Saving ...')
+			state = {
+				'net' : net.state_dict(),
+				'loss' : train_loss/(batch_id + 1),
+				'epoch' : epoch
+			}
+			if not os.path.isdir('checkpoint'):
+				os.mkdir('checkpoint')
+			torch.save(state, 'checkpoint/convergence.t7')
+			best_loss = train_loss/(batch_id + 1)
+
 	top1_error = 1 - float(train_correct)/total
 	top3_error = 1 - float(train_top3_correct)/total
 	print('Loss:{} | Top 1 Error: {} | Top 3 Error : {}'.format((train_loss/(batch_id + 1)), top1_error, top3_error))
@@ -171,18 +205,18 @@ def inspect():
 if args.resume:
 	print('===> Resuming from checkpoint ...')
 	assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
-	checkpoint = torch.load('./checkpoint/ckpt.t7')
+	checkpoint = torch.load('./checkpoint/convergence.t7')
 	net.load_state_dict(checkpoint['net'])
 	# best_acc = checkpoint['acc']
-	best_err = checkpoint['top3_error']
-	start_epoch = checkpoint['checkpoint']
-	for epoch in range(start_epoch, start_epoch + 150):
+	best_loss = checkpoint['loss']
+	start_epoch = checkpoint['epoch']
+	for epoch in range(start_epoch, start_epoch + args.interval):
 		train(epoch)
 		validate(epoch)
 
 if args.train:
 	print('===> Train the model ...')
-	for epoch in range(start_epoch, start_epoch+150):
+	for epoch in range(start_epoch, start_epoch+args.interval):
 		train(epoch)
 		validate(epoch)
 
