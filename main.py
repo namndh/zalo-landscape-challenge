@@ -22,7 +22,7 @@ from dataset import ZaloLandScapeTestDataset, ZaloLandscapeTrainValDataset
 
 TRAINVAL_PATH = os.path.join(constants.DATA_DIR, 'trainval_data.hdf5')
 TEST_PATH = os.path.join(constants.DATA_DIR, 'test_data.hdf5')
-LOG_FILE = os.path.join(constants.PROJECT_DIR, 'submisson.csv')
+LOG_FILE = os.path.join(constants.PROJECT_DIR, 'submission.csv')
 EMPTY_TEST_ADDRS_FILE = os.path.join(constants.PROJECT_DIR, 'empty_test_addr.b')
 
 parser = argparse.ArgumentParser(description='Zalo Landscape Classification')
@@ -45,6 +45,7 @@ transform_to_tensor = transforms.ToTensor()
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 transform = transforms.Compose([
+		transforms.RandomHorizontalFlip(),
 		transforms.ToTensor(),
 		normalize,
 	])
@@ -57,7 +58,7 @@ train_loader = utilsData.DataLoader(dataset=train_set, batch_size=50, sampler=No
 val_loader = utilsData.DataLoader(dataset=val_set, batch_size=50, sampler=None, shuffle=True, batch_sampler=None)
 test_loader = utilsData.DataLoader(dataset=test_set, batch_size=50, sampler=None, shuffle=False, batch_sampler=None)
 
-net = models.resnet34(pretrained=True)
+net = models.resnet18(pretrained=True)
 print(net)
 net.to(device)
 if device == 'cuda':

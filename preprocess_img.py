@@ -4,6 +4,9 @@ import sys
 import glob	 
 from random import shuffle
 import numpy as np 
+import pandas as pd
+import matplotlib.pyplot as plt
+import collections
 
 import h5py
 import pickle
@@ -149,18 +152,53 @@ def build_test_dataset(TEST_DATA_PATH,HDF5_TEST_PATH, size=256, gray=True):
 
 
 def main():
-	# for i in range(constants.NUM_LABELS):
-	# 	tmp_path = os.path.join(TRAINVAL_DATA_PATH, str(i) + '/*.jpg')
-	# 	# print(tmp_path)
-	# 	img_adrs = glob.glob(tmp_path, recursive=False)
-	# 	labels = [int(i)] * len(img_adrs)
-	# 	tmp_sets = list(zip(img_adrs, labels))
-	# 	for tmp_set in tmp_sets:
-	# 		trainval_dataset.append(tmp_set)
+	for i in range(constants.NUM_LABELS):
+		tmp_path = os.path.join(TRAINVAL_DATA_PATH, str(i) + '/*.jpg')
+		# print(tmp_path)
+		img_adrs = glob.glob(tmp_path, recursive=False)
+		labels = [int(i)] * len(img_adrs)
+		tmp_sets = list(zip(img_adrs, labels))
+		for tmp_set in tmp_sets:
+			trainval_dataset.append(list(tmp_set))
 
-	# if shuffle_dataset:
-	# 	shuffle(trainval_dataset)
-	# 	addrs, labels = zip(*trainval_dataset)
+	if shuffle_dataset:
+		shuffle(trainval_dataset)
+		# addrs, labels = zip(*trainval_dataset)
+	print(trainval_dataset[0])
+	labels = ['addr', 'label']
+	df = pd.DataFrame.from_records(trainval_dataset, columns=labels)
+	distribution = df['label'].value_counts()
+	distribution = distribution.apply(str)
+	distribution = df = pd.DataFrame.from_items(zip(distribution.index, distribution.str.split(' ')))
+	# distribution = distribution.T
+	print(distribution)
+	x = list(distribution.columns.values)
+	y = distribution.values.tolist()[0]
+	y = list(map(int, y))
+	# x = list(map(str, x))
+	print(type(y[0]))
+	print(type(x[0]))
+	print(x), print(y);
+	dict_x_y = dict(zip(x,y))
+	print(dict_x_y)
+	dict_x_y = collections.OrderedDict(sorted(dict_x_y.items()))
+	print(dict_x_y)
+	x_y = list(dict_x_y.items())
+	print(x_y)
+	x, y = list(zip(*x_y))
+	x = list(x)
+	y = list(y)
+	x = list(map(str, x))
+	print(x)
+	print(y)
+	# index = np.arange(len(x))
+	plt.figure(figsize=(20, 3))
+	plt.bar(x, y, align='center', width=0.3)
+	plt.xlabel('Labels', fontsize=5)
+	plt.ylabel('No of images', fontsize=3)
+	plt.show()	
+
+
 
 	# addrs, labels = list(addrs), list(labels)
 	# print(len(labels))
@@ -177,7 +215,7 @@ def main():
 	# val_addrs = addrs[int(0.8*len(addrs)):int(len(addrs))]
 	# val_labels = labels[int(0.8*len(addrs)):int(len(addrs))]
 	# build_train_val_dataset(train_addrs, val_addrs, train_labels, val_labels, HDF5_PATH, size=224, gray=False)
-	build_test_dataset(TEST_DATA_PATH, HDF5_TEST_PATH, size=224, gray=False)
+	# build_test_dataset(TEST_DATA_PATH, HDF5_TEST_PATH, size=224, gray=False)
 
 
 if __name__ == '__main__':
