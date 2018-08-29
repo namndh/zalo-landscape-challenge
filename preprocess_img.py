@@ -192,9 +192,14 @@ def main():
 	print(x)
 	print(y)
 	# index = np.arange(len(x))
-	plt.figure(figsize=(20, 3))
-	plt.bar(x, y, align='center', width=0.3)
-	plt.xlabel('Labels', fontsize=5)
+	# plt.figure(figsize=(20, 3))
+	y_pos = list()
+	for i in range(len(x)):
+		pos = int(x[i]) + 2
+		y_pos.append(pos)
+	print(y_pos)
+	plt.bar(y_pos, y)
+	plt.xticks(y_pos, x)
 	plt.ylabel('No of images', fontsize=3)
 	plt.show()	
 

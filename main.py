@@ -13,9 +13,9 @@ import torchvision.models as models
 import numpy as np
 import csv	
 import torchvision.transforms as transforms
-
 import pickle
 
+from model import CustomModel
 from utils import *
 import constants 
 from dataset import ZaloLandScapeTestDataset, ZaloLandscapeTrainValDataset
@@ -27,12 +27,12 @@ EMPTY_TEST_ADDRS_FILE = os.path.join(constants.PROJECT_DIR, 'empty_test_addr.b')
 
 parser = argparse.ArgumentParser(description='Zalo Landscape Classification')
 parser.add_argument('--lr', default=0.1, type=float, help='Learning Rate')
-parser.add_argument('--optim', default='adam', type=str, help='Optimization function')
+parser.add_argument('--softmax', default=False, type=bool, help='Using Softmax or not (True or False)')
 parser.add_argument('--resume', '-r', action='store_true', help='Resume from checkpoint')
 parser.add_argument('--train', '-tr', action='store_true', help='Train the model')
 parser.add_argument('--predict', '-pr', action='store_true', help='Predict the data')
 parser.add_argument('--inspect', '-ins', action='store_true', help='Inspect saved model')
-parser.add_argument('--interval', default=150, type=float, help='Number of epochs to train the model')
+parser.add_argument('--interval', default=150, type=int, help='Number of epochs to train the model')
 args = parser.parse_args()
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -45,7 +45,6 @@ transform_to_tensor = transforms.ToTensor()
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 transform = transforms.Compose([
-		transforms.RandomHorizontalFlip(),
 		transforms.ToTensor(),
 		normalize,
 	])
@@ -58,22 +57,23 @@ train_loader = utilsData.DataLoader(dataset=train_set, batch_size=50, sampler=No
 val_loader = utilsData.DataLoader(dataset=val_set, batch_size=50, sampler=None, shuffle=True, batch_sampler=None)
 test_loader = utilsData.DataLoader(dataset=test_set, batch_size=50, sampler=None, shuffle=False, batch_sampler=None)
 
-net = models.resnet18(pretrained=True)
+pretrained_model = models.resnet18(pretrained=True)
+net = CustomModel(pretrained_model, args.softmax)
 print(net)
 net.to(device)
 if device == 'cuda':
 	net = torch.nn.DataParallel(net)
 	# cudnn.benchmark = True
-
-
-criterion = nn.CrossEntropyLoss()
-if args.optim == 'adam':
+if args.softmax:
 	optimizer = optim.Adam(net.parameters(), lr=args.lr)
-if args.optim == 'sgd':
+	criterion = nn.CrossEntropyLoss()
+if not args.softmax:
 	optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9)
+	criterion = nn.MSELoss()
 
 
-def train(epoch):	
+def train(epoch):
+	print('Training ...')	
 	print('\nEpoch: %d' % int(epoch))
 	net.train()
 	train_loss = 0
@@ -129,6 +129,7 @@ def train(epoch):
 	print('Loss:{} | Top 1 Error: {} | Top 3 Error : {}'.format((train_loss/(batch_id + 1)), top1_error, top3_error))
 
 def validate(epoch):
+	print('Validating ...')
 	print('\nEpoch: %d' % int(epoch))
 	net.eval()
 	validate_loss = 0
