@@ -14,25 +14,30 @@ import numpy as np
 import csv	
 import torchvision.transforms as transforms
 import pickle
+import datetime
+import time
 
-from model import CustomModel
+from model import *
 from utils import *
 import constants 
 from dataset import ZaloLandScapeTestDataset, ZaloLandscapeTrainValDataset
 
 TRAINVAL_PATH = os.path.join(constants.DATA_DIR, 'trainval_data.hdf5')
 TEST_PATH = os.path.join(constants.DATA_DIR, 'test_data.hdf5')
-LOG_FILE = os.path.join(constants.PROJECT_DIR, 'submission.csv')
+LOG_FILE = os.path.join(constants.PROJECT_DIR, 'submission')
 EMPTY_TEST_ADDRS_FILE = os.path.join(constants.PROJECT_DIR, 'empty_test_addr.b')
 
 parser = argparse.ArgumentParser(description='Zalo Landscape Classification')
-parser.add_argument('--lr', default=0.1, type=float, help='Learning Rate')
-parser.add_argument('--softmax', default=False, type=bool, help='Using Softmax or not (True or False)')
+parser.add_argument('--lr', default=1e-2, type=float, help='Learning Rate')
+parser.add_argument('--optim', default='adam', choices=['adam', 'sgd'], type=str, help='Using Adam or SGD optimizer for model')
 parser.add_argument('--resume', '-r', action='store_true', help='Resume from checkpoint')
 parser.add_argument('--train', '-tr', action='store_true', help='Train the model')
 parser.add_argument('--predict', '-pr', action='store_true', help='Predict the data')
 parser.add_argument('--inspect', '-ins', action='store_true', help='Inspect saved model')
-parser.add_argument('--interval', default=150, type=int, help='Number of epochs to train the model')
+parser.add_argument('--interval', default=250, type=int, help='Number of epochs to train the model')
+parser.add_argument('--conv', default=False, type=bool, help='Use convergence model for predict')
+parser.add_argument('--weight_decay', default=5e-6, type=float, help='Weight decay')
+parser.add_argument('--frozen', '-frz', default=8, type=int, help="Freeze the model until --frozen block")
 args = parser.parse_args()
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -53,28 +58,24 @@ train_set = ZaloLandscapeTrainValDataset(TRAINVAL_PATH, root_dir='./data', train
 val_set = ZaloLandscapeTrainValDataset(TRAINVAL_PATH, root_dir='./data', train=False, transform=transform)
 test_set = ZaloLandScapeTestDataset(TEST_PATH, root_dir='./data', transform=transform)
 
-train_loader = utilsData.DataLoader(dataset=train_set, batch_size=50, sampler=None, shuffle=True, batch_sampler=None)
-val_loader = utilsData.DataLoader(dataset=val_set, batch_size=50, sampler=None, shuffle=True, batch_sampler=None)
-test_loader = utilsData.DataLoader(dataset=test_set, batch_size=50, sampler=None, shuffle=False, batch_sampler=None)
+train_loader = utilsData.DataLoader(dataset=train_set, batch_size=100, sampler=None, shuffle=True, batch_sampler=None)
+val_loader = utilsData.DataLoader(dataset=val_set, batch_size=100, sampler=None, shuffle=False, batch_sampler=None)
+test_loader = utilsData.DataLoader(dataset=test_set, batch_size=100, sampler=None, shuffle=False, batch_sampler=None)
 
 pretrained_model = models.resnet18(pretrained=True)
-net = CustomModel(pretrained_model, args.softmax)
-print(net)
+net = CustomModel(pretrained_model)
+criterion = nn.CrossEntropyLoss()
+net, optimizer = net_frozen(args, net)
+# print(net)
 net.to(device)
 if device == 'cuda':
 	net = torch.nn.DataParallel(net)
 	# cudnn.benchmark = True
-if args.softmax:
-	optimizer = optim.Adam(net.parameters(), lr=args.lr)
-	criterion = nn.CrossEntropyLoss()
-if not args.softmax:
-	optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9)
-	criterion = nn.MSELoss()
 
 
 def train(epoch):
-	print('Training ...')	
-	print('\nEpoch: %d' % int(epoch))
+	print('\nTraining ...')	
+	print('Epoch: %d' % int(epoch))
 	net.train()
 	train_loss = 0
 	train_correct = 0 
@@ -99,6 +100,10 @@ def train(epoch):
 		train_correct += predicted.eq(labels).sum().item()
 
 	global best_loss
+	top1_error = 1 - float(train_correct)/total
+	top3_error = 1 - float(train_top3_correct)/total
+	print('Loss:{} | Top 1 Error: {} | Top 3 Error : {}'.format((train_loss/(batch_id + 1)), top1_error, top3_error))
+
 	if epoch == 0:
 		best_loss = train_loss/(batch_id + 1)
 		print('Saving ....')
@@ -124,13 +129,11 @@ def train(epoch):
 			torch.save(state, 'checkpoint/convergence.t7')
 			best_loss = train_loss/(batch_id + 1)
 
-	top1_error = 1 - float(train_correct)/total
-	top3_error = 1 - float(train_top3_correct)/total
-	print('Loss:{} | Top 1 Error: {} | Top 3 Error : {}'.format((train_loss/(batch_id + 1)), top1_error, top3_error))
+	
 
 def validate(epoch):
-	print('Validating ...')
-	print('\nEpoch: %d' % int(epoch))
+	print('\nValidating ...')
+	print('Epoch: %d' % int(epoch))
 	net.eval()
 	validate_loss = 0
 	validate_correct = 0
@@ -169,17 +172,26 @@ def validate(epoch):
 		torch.save(state, 'checkpoint/ckpt.t7')
 		best_err = top3_error
 
-def predict():
+def predict(conv):
 	assert os.path.isdir('checkpoint'), 'Error: model not available'
-	checkpoint = torch.load('./checkpoint/ckpt.t7')
-	net.load_state_dict(checkpoint['net'])
-	top1_err = checkpoint['top1_err']
-	top3_err = checkpoint['top3_err']
-	start_epoch = checkpoint['epoch']
-	f = open(LOG_FILE, 'w+')
+	if conv:
+		model = torch.load('./checkpoint/convergence.t7')
+		net.load_state_dict(model['net'])
+		loss = model['loss']
+		print('Model was convergence at loss: {}'.format(loss))
+
+	else:
+		checkpoint = torch.load('./checkpoint/ckpt.t7')
+		net.load_state_dict(checkpoint['net'])
+		top1_err = checkpoint['top1_err']
+		top3_err = checkpoint['top3_err']
+		start_epoch = checkpoint['epoch']
+		print('Model was trained and validated with top-1-err:{} and top-3-err:{}'.format(top1_err, top3_err))
+
+	f = open(LOG_FILE + str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')) + '.csv', 'w+')
 	f.write('id,predicted\n')
 
-	print('Model was trained and validated with top-1-err:{} and top-3-err:{}'.format(top1_err, top3_err))
+	torch.set_grad_enabled(False)
 	net.eval()
 	for idx, (images, images_ids) in enumerate(test_loader):
 		images = images.to(device)
@@ -197,9 +209,12 @@ def predict():
 def inspect():
 	assert os.path.isdir('checkpoint'), 'Error: model not available!'
 	checkpoint = torch.load('./checkpoint/ckpt.t7')
-	net.load_state_dict(checkpoint['net'])
+	model = torch.load('./checkpoint/convergence.t7')	
+	# net.load_state_dict(checkpoint['net'])
+	loss = model['loss']
 	top1_err = checkpoint['top1_err']
 	top3_err = checkpoint['top3_err']
+	print('Model was convergence at loss:{} in Train set'.format(loss))
 	print('Model was saved based on results in Validate set.\n')
 	print('Device: {} | Top 1 Error : {} | Top 3 Error: {}'.format(device, top1_err, top3_err))
 
@@ -207,7 +222,7 @@ def inspect():
 if args.resume:
 	print('===> Resuming from checkpoint ...')
 	assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
-	checkpoint = torch.load('./checkpoint/convergence.t7')
+	checkpoint = torch.load('./checkpoint/ckpt.t7')
 	net.load_state_dict(checkpoint['net'])
 	# best_acc = checkpoint['acc']
 	best_loss = checkpoint['loss']
@@ -223,7 +238,7 @@ if args.train:
 		validate(epoch)
 
 if args.predict:
-	predict()
+	predict(args.conv)
 
 if args.inspect:
 	inspect()
