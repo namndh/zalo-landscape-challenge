@@ -7,7 +7,6 @@ cycler==0.10.0
 dask==0.18.2
 decorator==4.3.0
 entrypoints==0.2.3
-Flask==0.12.2
 h5py==2.8.0
 html5lib==0.9999999
 ipykernel==4.8.2
